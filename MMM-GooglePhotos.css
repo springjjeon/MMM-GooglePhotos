@@ -9,6 +9,10 @@
   from {opacity: 0}
   to {opacity: 1}
 }
+@keyframes block {
+  from {opacity: 1}
+  to {opacity: 0}
+}
 
 .region.fullscreen #GPHOTO {
   position:absolute;
@@ -93,4 +97,21 @@
   font-size:18px;
   line-height:100%;
   color:#FFF;
+}
+
+#GPHOTO_TOP {  
+  position: absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;  
+  background-color: rgba(0,0,0,1);
+}
+#GPHOTO_TOP.animated_block {
+  animation-name: block;
+  animation-duration: 2s;
+}
+#GPHOTO_TOP.animated_trans {
+  animation-name: trans;
+  animation-duration: 2s;
 }

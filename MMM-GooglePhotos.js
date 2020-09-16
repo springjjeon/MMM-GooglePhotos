@@ -23,6 +23,7 @@ Module.register("MMM-GooglePhotos", {
     showHeight: 1920,
     timeFormat: "YYYY/MM/DD HH:mm",
     autoInfoPosition: false,
+	  enableFadeEffect : false,
   },
 
   getStyles: function() {
@@ -93,7 +94,9 @@ Module.register("MMM-GooglePhotos", {
     this.ready(url, target)
     this.index++
     this.updateTimer = setTimeout(()=>{
-      this.updatePhotos()
+		if(this.config.enableFadeEffect == false) {
+			this.updatePhotos();
+		}      
     }, this.config.updateInterval)
   },
 
@@ -110,7 +113,14 @@ Module.register("MMM-GooglePhotos", {
       var dom = document.getElementById("GPHOTO")
       back.style.backgroundImage = `url(${url})`
       current.style.backgroundImage = `url(${url})`
-      current.classList.add("animated")
+	  if(this.config.enableFadeEffect == true) {
+		  var topdiv = document.getElementById("GPHOTO_TOP")
+		  topdiv.style.opacity = "1";
+		  topdiv.classList.add("animated_block")
+	  }
+	  else {
+		current.classList.add("animated")
+	  }
       var info = document.getElementById("GPHOTO_INFO")
       var album = this.albums.find((a)=>{
         if (a.id == target._albumId) return true
@@ -180,9 +190,31 @@ Module.register("MMM-GooglePhotos", {
     var info = document.createElement("div")
     info.id = "GPHOTO_INFO"
     info.innerHTML = "Loading..."
+    var topdiv;
+    if(this.config.enableFadeEffect == true) {
+      var topdiv = document.createElement("div")
+      topdiv.id = "GPHOTO_TOP"
+      topdiv.addEventListener('animationend', ()=>{
+        if(topdiv.classList.contains("animated_block")) {
+          topdiv.classList.remove("animated_block")
+          topdiv.style.opacity = "0";
+          this.fadeoutTimer = setTimeout(()=>{
+            clearTimeout(this.fadeoutTimer)
+            topdiv.classList.add("animated_trans")
+          }, this.config.updateInterval-4000)
+        }else if(topdiv.classList.contains("animated_trans")) {
+          topdiv.classList.remove("animated_trans")
+          topdiv.style.opacity = "1";			
+          this.updatePhotos()				
+        }
+      })
+    }
     wrapper.appendChild(back)
     wrapper.appendChild(current)
     wrapper.appendChild(info)
+    if(this.config.enableFadeEffect == true) {
+      wrapper.appendChild(topdiv)
+    }
     console.log("updated!")
     return wrapper
   },
