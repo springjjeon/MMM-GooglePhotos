@@ -37,13 +37,30 @@ module.exports = NodeHelper.create({
       case 'IMAGE_LOADED':
         this.log("Image loaded:", payload)
         break
+	  case 'GET_IMAGE_AVERAGE_COLOR':
+	    this.getImageAverageColor(payload)		
+        break
     }
   },
 
   log: function(...args) {
     if (this.debug) console.log("[GPHOTOS]", ...args)
   },
-
+   
+  getImageAverageColor: function(imgURL) {    
+    var request = require('request');	
+	request.head(imgURL, function(err, res, body){    
+	});
+    request(imgURL).pipe(fs.createWriteStream(path.resolve(__dirname, "cache", "temp.jpg"))).on('close', async() => {
+		const average = require('image-average-color');
+		average(path.resolve(__dirname, "cache", "temp.jpg"), (err, color) => {
+		  if (err) throw err;
+			if (this.debug) console.log("[GPHOTOS]getImageAverageColor ", ...color)
+			this.sendSocketNotification("IMGAVGCOLOR", color)
+		});		
+	})
+  },
+  
   upload: function(path) {
     if (!this.uploadAlbumId) {
       this.log("No uploadable album exists.")

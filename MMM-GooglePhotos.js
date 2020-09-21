@@ -23,13 +23,13 @@ Module.register("MMM-GooglePhotos", {
     showHeight: 1920,
     timeFormat: "YYYY/MM/DD HH:mm",
     autoInfoPosition: false,
-	  enableFadeEffect : false,
+	enableNewPhotoEffect : false,
   },
 
   getStyles: function() {
     return ["MMM-GooglePhotos.css"]
   },
-
+      
   start: function() {
     this.uploadableAlbum = null
     this.albums = null
@@ -57,8 +57,16 @@ Module.register("MMM-GooglePhotos", {
         this.firstScan == false
         this.updatePhotos()
       }
-
     }
+	if (noti == "IMGAVGCOLOR") {		
+		var color = 'rgba(' + payload[0] + ',' + payload[1]+ ','+payload[2]+ ','+payload[3] + ')'	
+		document.getElementById("GPHOTO_BACK").style.filter = ''
+		document.getElementById("GPHOTO_BACK").style.backgroundColor = color
+		var topdiv = document.getElementById("GPHOTO_TOP")
+		  topdiv.style.opacity = "1";
+		  topdiv.classList.add("animated_block")
+		this.log("recived IMGCOLOR:" +color)		
+	}	
   },
 
   notificationReceived: function(noti, payload, sender) {
@@ -93,11 +101,14 @@ Module.register("MMM-GooglePhotos", {
     var url = target.baseUrl + `=w${this.config.showWidth}-h${this.config.showHeight}`
     this.ready(url, target)
     this.index++
-    this.updateTimer = setTimeout(()=>{
-		if(this.config.enableFadeEffect == false) {
-			this.updatePhotos();
-		}      
-    }, this.config.updateInterval)
+	if(this.config.enableNewPhotoEffect == true) {		 
+		this.sendSocketNotification("GET_IMAGE_AVERAGE_COLOR", url)
+	}
+	else {
+		this.updateTimer = setTimeout(()=>{
+				this.updatePhotos();
+		}, this.config.updateInterval)
+	}    
   },
 
   ready: function(url, target) {
@@ -111,14 +122,9 @@ Module.register("MMM-GooglePhotos", {
       var current = document.getElementById("GPHOTO_CURRENT")
       //current.classList.remove("animated")
       var dom = document.getElementById("GPHOTO")
-      back.style.backgroundImage = `url(${url})`
       current.style.backgroundImage = `url(${url})`
-	  if(this.config.enableFadeEffect == true) {
-		  var topdiv = document.getElementById("GPHOTO_TOP")
-		  topdiv.style.opacity = "1";
-		  topdiv.classList.add("animated_block")
-	  }
-	  else {
+	  if(this.config.enableNewPhotoEffect == false) {
+		back.style.backgroundImage = `url(${url})`	  
 		current.classList.add("animated")
 	  }
       var info = document.getElementById("GPHOTO_INFO")
@@ -170,28 +176,30 @@ Module.register("MMM-GooglePhotos", {
       this.sendSocketNotification("IMAGE_LOADED", url)
     }
     hidden.src = url
-  },
-
+  },	
 
   getDom: function() {
     var wrapper = document.createElement("div")
     wrapper.id = "GPHOTO"
     var back = document.createElement("div")
     back.id = "GPHOTO_BACK"
+	if(this.config.enableNewPhotoEffect == false) {
+		back.classList.add("backgroundFilter")
+	}
     var current = document.createElement("div")
     current.id = "GPHOTO_CURRENT"
     if (this.data.position.search("fullscreen") == -1) {
       if (this.config.showWidth) wrapper.style.width = this.config.showWidth + "px"
       if (this.config.showHeight) wrapper.style.height = this.config.showHeight + "px"
     }
-    current.addEventListener('animationend', ()=>{
+    current.addEventListener('animationend', ()=>{	  
       current.classList.remove("animated")
     })
     var info = document.createElement("div")
     info.id = "GPHOTO_INFO"
     info.innerHTML = "Loading..."
     var topdiv;
-    if(this.config.enableFadeEffect == true) {
+    if(this.config.enableNewPhotoEffect == true) {
       var topdiv = document.createElement("div")
       topdiv.id = "GPHOTO_TOP"
       topdiv.addEventListener('animationend', ()=>{
@@ -208,13 +216,14 @@ Module.register("MMM-GooglePhotos", {
           this.updatePhotos()				
         }
       })
-    }
+    }	  
     wrapper.appendChild(back)
     wrapper.appendChild(current)
-    wrapper.appendChild(info)
-    if(this.config.enableFadeEffect == true) {
+	if(this.config.enableNewPhotoEffect == true) {
       wrapper.appendChild(topdiv)
     }
+    wrapper.appendChild(info)	
+    
     console.log("updated!")
     return wrapper
   },
