@@ -352,12 +352,14 @@ Module.register("MMM-GooglePhotos", {
     hidden.src = url
   },	
 
-
   getDom: function() {
     var wrapper = document.createElement("div")
     wrapper.id = "GPHOTO"
     var back = document.createElement("div")
     back.id = "GPHOTO_BACK"
+	if(this.config.enableNewPhotoEffect == false) {
+		back.classList.add("backgroundFilter")
+	}
     var current = document.createElement("div")
     current.id = "GPHOTO_CURRENT"
     if (this.data.position.search("fullscreen") == -1) {
