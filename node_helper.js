@@ -6,6 +6,11 @@ const https = require('https')
 const moment = require('moment')
 const GP = require("./GPhotos.js")
 const authOption = require("./google_auth.json")
+const request = require('request');
+const average = require('image-average-color');
+const sizeOf = require('image-size');
+const express = require('express')
+const {spawn} = require('child_process')
 
 
 var GPhotos = null
@@ -37,13 +42,51 @@ module.exports = NodeHelper.create({
       case 'IMAGE_LOADED':
         this.log("Image loaded:", payload)
         break
+	    case 'GET_IMAGE_AVERAGE_COLOR':
+	    this.getImageAverageColor(payload)		
+        break
+      case 'LOG':
+        if (this.debug) console.log("[GPHOTOS]jsLOG:", payload)
+        break
     }
   },
 
   log: function(...args) {
     if (this.debug) console.log("[GPHOTOS]", ...args)
   },
+   
+  getImageAverageColor: function(imgURL) {    
+    	
+	request.head(imgURL, function(err, res, body){    
+	});
+    request(imgURL).pipe(fs.createWriteStream(path.resolve(__dirname, "cache", "temp.jpg"))).on('close', async() => {
+    
+    average(path.resolve(__dirname, "cache", "temp.jpg"), (err, color) => {
+      if (err) throw err;      
+      this.log("[IMGAVGCOLOR]" + color);					
+      this.sendSocketNotification("IMGAVGCOLOR", color)
 
+      if(this.config.enableFaceFocus)
+      {
+        const python = spawn('python', ['/home/pi/faceDetection.py', path.resolve(__dirname, "cache", "temp.jpg")]);
+        python.stdout.on('data', (data) => {            
+          this.log("[IMGFACE]" + data);
+          //this.sendSocketNotification("IMGFACE", data)
+          this.sendSocketNotification("IMGAVGCOLOR", {"IMGAVGCOLOR":color,"IMGFACE":data});
+        });
+      }
+      else
+      {
+        var dimensions = sizeOf(path.resolve(__dirname, "cache", "temp.jpg"));
+        //this.sendSocketNotification("IMGSIZE", dimensions);
+        this.sendSocketNotification("IMGAVGCOLOR", {"IMGAVGCOLOR":color,"IMGSIZE":dimensions});
+        this.log("[IMGSIZE]" + dimensions.width + "," + dimensions.height);	
+      }
+    });  
+    
+	})
+  },
+  
   upload: function(path) {
     if (!this.uploadAlbumId) {
       this.log("No uploadable album exists.")

@@ -1,3 +1,16 @@
+body {
+    margin: 40px;
+	position: absolute;
+ 	transform: rotate(90deg) translate(+80px, 0px);
+ 	transform-origin: bottom left;
+	height: calc(100vw - 80px);
+    width: calc(100vh - 80px);
+	object-fit: cover;
+	top: -100vw ;
+    visibility: visible;	
+	
+ }
+
 #GPHOTO_INFO {
   --top: none;
   --left: none;
@@ -8,6 +21,10 @@
 @keyframes trans {
   from {opacity: 0}
   to {opacity: 1}
+}
+@keyframes block {
+  from {opacity: 1}
+  to {opacity: 0}
 }
 
 .region.fullscreen #GPHOTO {
@@ -30,10 +47,10 @@
   background-repeat:no-repeat;
   background-position:center;
   position: absolute;
-  top:10px;
-  left:10px;
-  right:10px;
-  bottom:10px;
+  top:0px;
+  left:0px;
+  right:0px;
+  bottom:0px;
 }
 
 #GPHOTO_CURRENT.animated {
@@ -49,9 +66,9 @@
   top:0;
   left:0;
   right:0;
-  bottom:0;
-  filter: blur(10px) sepia(80%) brightness(40%);
+  bottom:0;  
 }
+
 
 #GPHOTO_INFO {
   position:absolute;
@@ -59,7 +76,7 @@
   left: var(--left);
   bottom: var(--bottom);
   right: var(--right);
-  margin:10px;
+  margin:10px;  
   background-color: rgba(0,0,0,0.5);
   padding: 10px;
   border-radius: 36px;
@@ -93,4 +110,21 @@
   font-size:18px;
   line-height:100%;
   color:#FFF;
+}
+
+#GPHOTO_TOP {  
+  position: absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;  
+  background-color: rgba(0,0,0,1);
+}
+#GPHOTO_TOP.animated_block {
+  animation-name: block;
+  animation-duration: 2s;
+}
+#GPHOTO_TOP.animated_trans {
+  animation-name: trans;
+  animation-duration: 2s;
 }
