@@ -64,7 +64,7 @@ module.exports = NodeHelper.create({
     average(path.resolve(__dirname, "cache", "temp.jpg"), (err, color) => {
       if (err) throw err;      
       this.log("[IMGAVGCOLOR]" + color);					
-      this.sendSocketNotification("IMGAVGCOLOR", color)
+      //this.sendSocketNotification("IMGAVGCOLOR", color)
 
       if(this.config.enableFaceFocus)
       {
