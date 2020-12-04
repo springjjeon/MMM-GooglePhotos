@@ -292,6 +292,7 @@ Module.register("MMM-GooglePhotos", {
   ready: function(url, target) {
     var hidden = document.createElement("img")
     hidden.onerror = () => {
+      this.updatePhotos();
       console.log("[GPHOTO] Image load fails.")
       this.sendSocketNotification("IMAGE_LOAD_FAIL", url)
     }
