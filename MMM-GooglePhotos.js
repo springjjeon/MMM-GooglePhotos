@@ -65,14 +65,23 @@ Module.register("MMM-GooglePhotos", {
     console.log("recived IMGCOLOR:" +color)		
     if(this.config.enableFaceFocus == false)
     {
-      this.setImageSize(payload.IMGSIZE)
+      this.setImageSize(payload.IMGSIZE)      
+    }
+    else
+    {
+      var enc = new TextDecoder("utf-8");
+      var obj = JSON.parse(enc.decode(payload.IMGFACE))
+      if(obj.count > 0 && Math.floor(Math.random() * (5)) != 0) // use default effect for 20%
+        this.setImageFace(payload.IMGFACE)      
+      else
+        this.setImageSize({'width':obj.width, 'height':obj.height})     
+    }
       var topdiv = document.getElementById("GPHOTO_TOP")
       topdiv.style.opacity = "1";
       topdiv.classList.add("animated_block")  
       var current = document.getElementById("GPHOTO_CURRENT")       
       if(this.config.enableAnimatedPhotoEffect == true)
         current.classList.add(this.AnimationEffect);
-    }
 	}	
   },
   setImageSize:function(payload) {
@@ -108,9 +117,7 @@ Module.register("MMM-GooglePhotos", {
 				  animationY = 2; // landscape, don't move up and down
 			else
 				  animationX = 2; // portrait, don't move left and right
-			
     }		 
-    
 
     var fromX,toX, fromY,toY, fromZ, toZ;
     switch(animationX)
@@ -139,120 +146,73 @@ Module.register("MMM-GooglePhotos", {
         fromZ = "1.1"; toZ = "1"; break;
       default: //stay
         fromZ = "1"; toZ = "1"; break;
-    }
-    this.AnimationEffect = "move-size";
+    }    
 
+    this.AnimationEffect = "move-size";
     var cssstyle = document.getElementById("cssstyle");
-    cssstyle.innerHTML = '@keyframes move-size { 0%{transform: translate('+ fromX+', '+ fromY+'); scale('+fromZ+', '+fromZ+');} 100%{transform: translate('+ toX+', '+ toY+'); scale('+toZ+', '+toZ+');} }';    
+    cssstyle.innerHTML = '@keyframes move-size { from{transform: translate('+ fromX+', '+ fromY+') scale('+fromZ+', '+fromZ+');} to{transform: translate('+ toX+', '+ toY+') scale('+toZ+', '+toZ+');} }';    
     cssstyle.innerHTML +='  #GPHOTO_CURRENT.move-size { animation-name: move-size;  animation-duration: '+(this.config.updateInterval/1000 + 10)+'s; }';
+
+    //alert(cssstyle.innerHTML);
 	
   },
   setImageFace:function(payload) {
+    this.AnimationEffect = "zoom-in";		
     var enc = new TextDecoder("utf-8");
     var obj = JSON.parse(enc.decode(payload))
     
     var current = document.getElementById("GPHOTO_CURRENT")   
     
-    var photoAspectRatio = obj.width / obj.height;
-    var displayAspectRatio = this.config.showWidth / this.config.showHeight;
+    var animationZ = Math.floor(Math.random() * (2)); //0~2
+
+    var targetFaceX = 0;
+    var targetFaceY = 0;
+    var targetFaceWidth = 0;
+    var targetFaceHeight = 0;
+
+    //Randomly select face for animation
+    var targetFace = Math.floor(Math.random() * (obj.count)); //face count
+
+    targetFaceX = obj.faces[targetFace].x + (obj.faces[targetFace].w /2);
+    targetFaceY = obj.faces[targetFace].y + (obj.faces[targetFace].h /2);
+    targetFaceWidth = obj.faces[targetFace].w;
+    targetFaceHeight = obj.faces[targetFace].h;
     
-    var animationKind;
-    
-    var animationX ="";
-    var animationY ="";
-    var animationZ ="";
-    if(obj.count > 0)
-    {
-        var targetX = 0;
-        var targetY = 0;
-        for(i = 0 ; i < obj.count ; i++)
-        {
-          targetX += (obj.faces[i].x + obj.faces[i].w /2)
-          targetY += (obj.faces[i].y + obj.faces[i].h /2)
-        }
-        targetX = targetX / obj.count;
-        targetY = targetY / obj.count;
+    targetFaceRaio = targetFaceWidth> 500 ? 1 : 500 / targetFaceWidth;
+    targetFaceXDifferential = targetFaceX - (this.config.showWidth / 2)
+    targetFaceYDifferential = targetFaceY - (this.config.showHeight / 2)
 
-        if(obj.width / targetX > 1.0 ) animationX = "left";
-        //else if(obj.width / targetX > 0.7 ) animationX = "center";
-        else animationX = "right";
 
-        if(obj.width / targetY > 1.0 ) animationY = "up";
-        //else if(obj.width / targetY > 0.7 ) animationY = "center";
-        else animationY = "down";
-    }
-    else
-    {
-      animationX = "center";
-      animationY = "center";
-    }
+    var fromX,toX, fromY,toY, fromZ, toZ;
+   if(animationZ == 0) //zoomin
+   {
+      fromX = "0px"; toX = (targetFaceXDifferential/4*-1) + "px"; 
+      fromY = "0px"; toY = (targetFaceYDifferential/4*-1) + "px";
+      fromZ = "1"; toZ = Math.min(Math.round(1*targetFaceRaio,2) , 1.25);
+   }
+   else if(animationZ == 1) //zoom out
+   {
+    toX = "0px"; fromX = (targetFaceXDifferential/4*-1) + "px"; 
+    toY = "0px"; fromY = (targetFaceYDifferential/4*-1) + "px";
+    toZ = "1"; fromZ = Math.min(Math.round(1*targetFaceRaio,2) , 1.25);
+   } 
+   else ////no zoom
+   {
+    fromX = "0px"; toX = (targetFaceXDifferential/4*-1) + "px"; 
+    fromY = "0px"; toY = (targetFaceYDifferential/4*-1) + "px";
+    fromZ = "1"; toZ = "1";;
+   }
 
-    console.log("IMGFACE: count = " + obj.count + ", X:" + animationX + ", Y:" + animationY);
-
-    if(Math.abs(photoAspectRatio - displayAspectRatio) < 0.16)
-    {
-      increaseLength = (Math.abs(photoAspectRatio - displayAspectRatio) * this.config.showHeight + 100)/2 ;
-      
-      current.style.top = "-"+increaseLength+"px";
-      current.style.left = "-"+increaseLength+"px";
-      current.style.right = "-"+increaseLength+"px";
-      current.style.bottom = "-"+increaseLength+"px";		
-      animationKind  = Math.floor(Math.random() * (7 - 0))						
-    }
-    else
-    {
-      current.style.top = "-50px";
-      current.style.left = "-50px";
-      current.style.right = "-50px";
-      current.style.bottom = "-50px";			
-      if(photoAspectRatio - displayAspectRatio > 0)
-        animationKind  =  Math.floor(Math.random() * (5 - 0));
-      else
-        animationKind  =  Math.floor(Math.random() * (5 - 0))+2;
-      
-    }		
-    
-  
-    var fromX,toX, fromY,toY;
-    switch(animationX)
-    {
-      case "left":
-        fromX = "50px";
-        toX = "-50px";
-        break;
-      case "right":
-        fromX = "-50px";
-        toX = "50px";
-        break;
-      case "center":
-        fromX = "0px";
-        toX = "0px";
-        break;
-    }
-
-    switch(animationY)
-    {
-      case "up":
-        fromY = "-50px";
-        toY = "50px";
-        break;
-      case "down":
-        fromY = "50px";
-        toY = "-50px";
-        break;
-      case "center":
-        fromY = "0px";
-        toY = "0px";
-        break;
-    }
-
-    
-    this.AnimationEffect = "move-face";
+  // alert("targetFaceX:" + targetFaceX + "targetFaceY:" + targetFaceY+ "targetFaceWidth:" + targetFaceWidth
+  // + "targetFaceRaio:" + targetFaceRaio
+  // + "targetFaceXDifferential:" + targetFaceXDifferential
+  // + "targetFaceYDifferential:" + targetFaceYDifferential)
+    this.AnimationEffect = "move-size";
 
     var cssstyle = document.getElementById("cssstyle");
-    cssstyle.innerHTML = '@keyframes move-face { 0%{transform: translate('+ fromX+', '+ fromY+');transform: scale(1, 1);} 100%{transform: translate('+ toX+', '+ toY+');transform: scale(1.1, 1.1);} }';    
-    cssstyle.innerHTML +='  #GPHOTO_CURRENT.move-face { animation-name: move-face;  animation-duration: 20s; }';
-
+    cssstyle.innerHTML = '@keyframes move-size { from {transform: translate('+ fromX+', '+ fromY+') scale('+fromZ+', '+fromZ+');} to {transform: translate('+ toX+', '+ toY+') scale('+toZ+', '+toZ+');} }';    
+    cssstyle.innerHTML +='  #GPHOTO_CURRENT.move-size { animation-name: move-size;  animation-duration: '+(this.config.updateInterval/1000 + 10)+'s; }';
+  
   },
   notificationReceived: function(noti, payload, sender) {
     if (noti == "GPHOTO_NEXT") {
@@ -292,7 +252,6 @@ Module.register("MMM-GooglePhotos", {
   ready: function(url, target) {
     var hidden = document.createElement("img")
     hidden.onerror = () => {
-      this.updatePhotos();
       console.log("[GPHOTO] Image load fails.")
       this.sendSocketNotification("IMAGE_LOAD_FAIL", url)
     }

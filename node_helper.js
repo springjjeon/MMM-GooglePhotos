@@ -11,6 +11,8 @@ const average = require('image-average-color');
 const sizeOf = require('image-size');
 const express = require('express')
 const {spawn} = require('child_process')
+const execSync = require('child_process').execSync;
+
 
 
 var GPhotos = null
@@ -64,21 +66,19 @@ module.exports = NodeHelper.create({
     average(path.resolve(__dirname, "cache", "temp.jpg"), (err, color) => {
       if (err) throw err;      
       this.log("[IMGAVGCOLOR]" + color);					
-      //this.sendSocketNotification("IMGAVGCOLOR", color)
-
+      
       if(this.config.enableFaceFocus)
       {
-        const python = spawn('python', ['/home/pi/faceDetection.py', path.resolve(__dirname, "cache", "temp.jpg")]);
+        this.log("[enableFaceFocus]" + path.resolve(__dirname, "cache", "temp.jpg"));
+        const python = spawn('python', [this.config.faceDetectionScript, path.resolve(__dirname, "cache", "temp.jpg")]);
         python.stdout.on('data', (data) => {            
-          this.log("[IMGFACE]" + data);
-          //this.sendSocketNotification("IMGFACE", data)
+          this.log("[IMGFACE]" + data);          
           this.sendSocketNotification("IMGAVGCOLOR", {"IMGAVGCOLOR":color,"IMGFACE":data});
         });
       }
       else
       {
-        var dimensions = sizeOf(path.resolve(__dirname, "cache", "temp.jpg"));
-        //this.sendSocketNotification("IMGSIZE", dimensions);
+        var dimensions = sizeOf(path.resolve(__dirname, "cache", "temp.jpg"));        
         this.sendSocketNotification("IMGAVGCOLOR", {"IMGAVGCOLOR":color,"IMGSIZE":dimensions});
         this.log("[IMGSIZE]" + dimensions.width + "," + dimensions.height);	
       }
