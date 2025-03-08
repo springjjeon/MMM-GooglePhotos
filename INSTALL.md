@@ -5,7 +5,7 @@
     Run the following command. For example, the Magic Mirror directory is `~/MagicMirror`.
     ```sh
     cd ~/MagicMirror/modules
-    git clone https://github.com/hermanho/MMM-GooglePhotos.git
+    git clone https://github.com/springjjeon/MMM-GooglePhotos.git
     cd MMM-GooglePhotos
     npm run install-prod
     ```
@@ -14,7 +14,7 @@
 
     ```sh
     cd ~/MagicMirror/modules
-    git clone https://github.com/hermanho/MMM-GooglePhotos.git
+    git clone https://github.com/springjjeon/MMM-GooglePhotos.git
     docker exec -it -w /opt/magic_mirror/modules/MMM-GooglePhotos magic_mirror npm run install-prod
     ```
 
