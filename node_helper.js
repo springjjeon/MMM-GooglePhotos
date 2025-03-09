@@ -17,7 +17,11 @@ const { error_to_string } = require("./error_to_string");
 const { ConfigFileError, AuthError } = require("./Errors.js");
 const getAverageColor = require('fast-average-color-node');
 const probe = require('probe-image-size');
-
+const {spawn} = require('child_process')
+const execSync = require('child_process').execSync;
+const request = require('request');
+const https = require('https');
+const { log } = require("console");
 
 const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
@@ -81,9 +85,12 @@ const NodeHeleprObject = {
       case "MODULE_SUSPENDED_SKIP_UPDATE":
         this.log_debug("Module is suspended so skip the UI update");
         break;
-      case "GET_IMAGE_AVERAGE_COLOR":
-        this.getImageAverageColor(payload)		
+      case "GET_IMAGE_WITH_BACKGROUD_COLOR":
+        this.getImageAverageColor(payload)
         break;
+        case "GET_IMAGE_WITH_BACKGROUD_COLOR_FACEFOCUS":
+          this.getImageAverageColorWithFaceFocus(payload)
+          break;
       default:
         Log.error("Unknown notification received", notification);
     }
@@ -108,10 +115,23 @@ const NodeHeleprObject = {
   },
   getImageAverageColor: async function(imgURL) {      
     let result = await probe(imgURL);  
-    Log.info('probe', result);
     getAverageColor.getAverageColor(imgURL).then(color => {
-    Log.info('getAverageColor',color);
-    this.sendSocketNotification("IMGAVGCOLOR", {"IMGAVGCOLOR":color,"IMGSIZE":result});
+      this.sendSocketNotification("SETIMAGEWITHBACKGROUNDCOLOR", {"IMGAVGCOLOR":color,"IMGSIZE":result});
+    });  
+  },
+  getImageAverageColorWithFaceFocus: async function(imgURL) {      
+    let result = await probe(imgURL);  
+    getAverageColor.getAverageColor(imgURL).then(color => {
+      request.head(imgURL, function(err, res, body){});
+      request(imgURL).pipe(fs.createWriteStream(path.resolve(__dirname, "cache", "temp.jpg"))).on('close', async() => {
+        //Log.error("[IMGAVGCOLOR] ",  err);           
+        Log.info("[enableFaceFocus]" + path.resolve(__dirname, "cache", "temp.jpg"));
+        const python = spawn('python', [this.config.faceDetectionScript, path.resolve(__dirname, "cache", "temp.jpg")]);
+        python.stdout.on('data', (data) => {                         
+            this.sendSocketNotification("SETIMAGEWITHBACKGROUNDCOLORWITHFACE", {"IMGAVGCOLOR":color,"IMGSIZE":result,"IMGFACE":data});
+            Log.info("[IMGFACE]" + data);
+        });        
+      })
     });  
   },
   initializeAfterLoading: function (config) {

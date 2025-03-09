@@ -22,6 +22,7 @@ Module.register("MMM-GooglePhotos", {
     showWidth: 1080, // These values will be used for quality of downloaded photos to show. real size to show in your MagicMirror region is recommended.
     showHeight: 1920,
     timeFormat: "YYYY/MM/DD HH:mm",
+    enableFaceFocus: false,
     autoInfoPosition: false    
   },
   requiresVersion: "2.24.0",
@@ -76,12 +77,29 @@ Module.register("MMM-GooglePhotos", {
         this.updatePhotos(); //little faster starting
       }
     }
-    if (noti === "IMGAVGCOLOR") {		
+    if (noti === "SETIMAGEWITHBACKGROUNDCOLOR") {		
       var color = payload.IMGAVGCOLOR.rgba;	
       document.getElementById("GPHOTO_BACK").style.filter = ''
       document.getElementById("GPHOTO_BACK").style.backgroundColor = color			
-      //console.log("recived IMGCOLOR:" +color)		
-      this.setImageSize(payload.IMGSIZE)      
+      this.setImageSize(payload.IMGSIZE);
+      
+      let topdiv = document.getElementById("GPHOTO_TOP")
+      topdiv.style.opacity = "1";
+      topdiv.classList.add("animated_block")  
+      var current = document.getElementById("GPHOTO_CURRENT")       
+      current.classList.add(this.AnimationEffect);
+    }	
+    if (noti === "SETIMAGEWITHBACKGROUNDCOLORWITHFACE") {		
+      var color = payload.IMGAVGCOLOR.rgba;	
+      document.getElementById("GPHOTO_BACK").style.filter = ''
+      document.getElementById("GPHOTO_BACK").style.backgroundColor = color			
+      
+      var enc = new TextDecoder("utf-8");
+      var obj = JSON.parse(enc.decode(payload.IMGFACE))      
+      if(obj.count > 0 && Math.floor(Math.random() * (5)) != 0) // use default effect for 20%
+        this.setImageFace(payload.IMGFACE)      
+      else
+        this.setImageSize(payload.IMGSIZE)   
       
       let topdiv = document.getElementById("GPHOTO_TOP")
       topdiv.style.opacity = "1";
@@ -164,13 +182,62 @@ Module.register("MMM-GooglePhotos", {
         fromZ = "1"; toZ = "1"; break;
     }    
 
-     this.AnimationEffect = "move-size";
-     var cssstyle = document.getElementById("cssstyle");
-     cssstyle.innerHTML = '@keyframes move-size { from{transform: translate('+ fromX+', '+ fromY+') scale('+fromZ+', '+fromZ+');} to{transform: translate('+ toX+', '+ toY+') scale('+toZ+', '+toZ+');} }';    
-     cssstyle.innerHTML +='  #GPHOTO_CURRENT.move-size { animation-name: move-size;  animation-duration: '+(this.config.updateInterval/1000 + 10)+'s; }';
-
-    //alert(cssstyle.innerHTML);
+    this.AnimationEffect = "move-size";
+    var cssstyle = document.getElementById("cssstyle");
+    cssstyle.innerHTML = '@keyframes move-size { from{transform: translate('+ fromX+', '+ fromY+') scale('+fromZ+', '+fromZ+');} to{transform: translate('+ toX+', '+ toY+') scale('+toZ+', '+toZ+');} }';    
+    cssstyle.innerHTML +='  #GPHOTO_CURRENT.move-size { animation-name: move-size;  animation-duration: '+(this.config.updateInterval/1000 + 10)+'s; }';
 	
+  },
+  setImageFace:function(payload) {
+    this.AnimationEffect = "zoom-in";		
+    var enc = new TextDecoder("utf-8");
+    var obj = JSON.parse(enc.decode(payload))
+    
+    var current = document.getElementById("GPHOTO_CURRENT")   
+    
+    var animationZ = Math.floor(Math.random() * (2)); //0~2
+
+    var targetFaceX = 0;
+    var targetFaceY = 0;
+    var targetFaceWidth = 0;
+    var targetFaceHeight = 0;
+
+    //Randomly select face for animation
+    var targetFace = Math.floor(Math.random() * (obj.count)); //face count
+
+    targetFaceX = obj.faces[targetFace].x + (obj.faces[targetFace].w /2);
+    targetFaceY = obj.faces[targetFace].y + (obj.faces[targetFace].h /2);
+    targetFaceWidth = obj.faces[targetFace].w;
+    targetFaceHeight = obj.faces[targetFace].h;
+    
+    targetFaceRaio = targetFaceWidth> 500 ? 1 : 500 / targetFaceWidth;
+    targetFaceXDifferential = targetFaceX - (this.config.showWidth / 2)
+    targetFaceYDifferential = targetFaceY - (this.config.showHeight / 2)
+
+
+    var fromX,toX, fromY,toY, fromZ, toZ;
+    if(animationZ == 0) //zoomin
+    {
+        fromX = "0px"; toX = (targetFaceXDifferential/4*-1) + "px"; 
+        fromY = "0px"; toY = (targetFaceYDifferential/4*-1) + "px";
+        fromZ = "1"; toZ = Math.min(Math.round(1*targetFaceRaio,2) , 1.25);
+    }
+    else if(animationZ == 1) //zoom out
+    {
+      toX = "0px"; fromX = (targetFaceXDifferential/4*-1) + "px"; 
+      toY = "0px"; fromY = (targetFaceYDifferential/4*-1) + "px";
+      toZ = "1"; fromZ = Math.min(Math.round(1*targetFaceRaio,2) , 1.25);
+    } 
+    else ////no zoom
+    {
+      fromX = "0px"; toX = (targetFaceXDifferential/4*-1) + "px"; 
+      fromY = "0px"; toY = (targetFaceYDifferential/4*-1) + "px";
+      fromZ = "1"; toZ = "1";;
+    }
+    this.AnimationEffect = "move-size";
+    var cssstyle = document.getElementById("cssstyle");
+    cssstyle.innerHTML = '@keyframes move-size { from {transform: translate('+ fromX+', '+ fromY+') scale('+fromZ+', '+fromZ+');} to {transform: translate('+ toX+', '+ toY+') scale('+toZ+', '+toZ+');} }';    
+    cssstyle.innerHTML +='  #GPHOTO_CURRENT.move-size { animation-name: move-size;  animation-duration: '+(this.config.updateInterval/1000 + 10)+'s; }';
   },
   notificationReceived: function (noti, payload, sender) {
     if (noti === "GPHOTO_NEXT") {
@@ -211,7 +278,16 @@ Module.register("MMM-GooglePhotos", {
       this.index = 0;
       this.needMorePicsFlag = true;
     }
-    this.sendSocketNotification("GET_IMAGE_AVERAGE_COLOR", url);
+    
+    if(this.config.enableFaceFocus == true)
+    {
+      this.sendSocketNotification("GET_IMAGE_WITH_BACKGROUD_COLOR_FACEFOCUS", url);
+    }
+    else
+    {
+      this.sendSocketNotification("GET_IMAGE_WITH_BACKGROUD_COLOR", url);
+    }
+
     if (this.needMorePicsFlag) {
       setTimeout(() => {
         this.sendSocketNotification("NEED_MORE_PICS", []);
@@ -236,9 +312,6 @@ Module.register("MMM-GooglePhotos", {
     let back = document.getElementById("GPHOTO_BACK");
     let current = document.getElementById("GPHOTO_CURRENT");
     current.textContent = "";
-    //current.classList.remove("animated")
-    // let dom = document.getElementById("GPHOTO");
-    //back.style.backgroundImage = `url(${url})`;
     current.style.backgroundImage = `url(${url})`;
     current.classList.add("animated");
     const info = document.getElementById("GPHOTO_INFO");
