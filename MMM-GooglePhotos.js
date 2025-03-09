@@ -22,7 +22,7 @@ Module.register("MMM-GooglePhotos", {
     showWidth: 1080, // These values will be used for quality of downloaded photos to show. real size to show in your MagicMirror region is recommended.
     showHeight: 1920,
     timeFormat: "YYYY/MM/DD HH:mm",
-    autoInfoPosition: false,
+    autoInfoPosition: false    
   },
   requiresVersion: "2.24.0",
 
@@ -42,7 +42,7 @@ Module.register("MMM-GooglePhotos", {
     this.firstScan = true;
     if (this.config.updateInterval < 1000 * 10) this.config.updateInterval = 1000 * 10;
     this.config.condition = Object.assign({}, this.defaults.condition, this.config.condition);
-
+    
     const config = { ...this.config };
     for (let i = 0; i < config.albums.length; i++) {
       const album = config.albums[i];
@@ -63,14 +63,7 @@ Module.register("MMM-GooglePhotos", {
       this.uploadableAlbum = payload;
     }
     if (noti === "INITIALIZED") {
-      this.albums = payload;
-      //set up timer once initialized, more robust against faults
-      if (!this.updateTimer || this.updateTimer === null) {
-        Log.info("Start timer for updating photos.");
-        this.updateTimer = setInterval(() => {
-          this.updatePhotos();
-        }, this.config.updateInterval);
-      }
+      this.albums = payload;      
     }
     if (noti === "UPDATE_ALBUMS") {
       this.albums = payload;
@@ -83,6 +76,19 @@ Module.register("MMM-GooglePhotos", {
         this.updatePhotos(); //little faster starting
       }
     }
+    if (noti === "IMGAVGCOLOR") {		
+      var color = payload.IMGAVGCOLOR.rgba;	
+      document.getElementById("GPHOTO_BACK").style.filter = ''
+      document.getElementById("GPHOTO_BACK").style.backgroundColor = color			
+      //console.log("recived IMGCOLOR:" +color)		
+      this.setImageSize(payload.IMGSIZE)      
+      
+      let topdiv = document.getElementById("GPHOTO_TOP")
+      topdiv.style.opacity = "1";
+      topdiv.classList.add("animated_block")  
+      var current = document.getElementById("GPHOTO_CURRENT")       
+      current.classList.add(this.AnimationEffect);
+    }	
     if (noti === "ERROR") {
       const current = document.getElementById("GPHOTO_CURRENT");
       const errMsgDiv = document.createElement("div");
@@ -94,7 +100,78 @@ Module.register("MMM-GooglePhotos", {
       current.appendChild(errMsgDiv);
     }
   },
+  setImageSize:function(payload) {
+    this.AnimationEffect = "zoom-in";		
+		var current = document.getElementById("GPHOTO_CURRENT")
+	
+		var photoAspectRatio = payload.width / payload.height;
+		var displayAspectRatio = this.config.showWidth / this.config.showHeight;
+		
+		var animationKind;
+		
+    var animationX = Math.floor(Math.random() * (3)); //0~2
+    var animationY = Math.floor(Math.random() * (3)); //0~2
+    var animationZ = Math.floor(Math.random() * (3)); //0~2
 
+    if(Math.abs(photoAspectRatio - displayAspectRatio) < 0.16) // Full Screen
+		{
+			increaseLength = (Math.abs(photoAspectRatio - displayAspectRatio) * this.config.showHeight + 100)/2 ;
+			
+			current.style.top = "-"+increaseLength+"px";
+			current.style.left = "-"+increaseLength+"px";
+			current.style.right = "-"+increaseLength+"px";
+			current.style.bottom = "-"+increaseLength+"px";					
+		}
+		else
+		{
+			current.style.top = "-50px";
+			current.style.left = "-50px";
+			current.style.right = "-50px";
+      current.style.bottom = "-50px";			
+
+			if(photoAspectRatio - displayAspectRatio > 0)  
+				  animationY = 2; // landscape, don't move up and down
+			else
+				  animationX = 2; // portrait, don't move left and right
+    }		 
+
+    var fromX,toX, fromY,toY, fromZ, toZ;
+    switch(animationX)
+    {
+      case 0: //move to left
+        fromX = "50px"; toX = "-50px"; break;
+      case 1: //move to right
+        fromX = "-50px"; toX = "50px"; break;
+      default: //stay
+        fromX = "0px"; toX = "0px"; break;
+    }
+    switch(animationY)
+    {
+      case 0: //move to up
+        fromY = "-50px"; toY = "50px"; break;
+      case 1: //move to down
+        fromY = "50px"; toY = "-50px"; break;
+      default: //stay
+        fromY = "0px"; toY = "0px"; break;
+    }
+    switch(animationZ)
+    {
+      case 0: //zoom-in
+        fromZ = "1"; toZ = "1.1"; break;
+      case 1: //zoom-out
+        fromZ = "1.1"; toZ = "1"; break;
+      default: //stay
+        fromZ = "1"; toZ = "1"; break;
+    }    
+
+     this.AnimationEffect = "move-size";
+     var cssstyle = document.getElementById("cssstyle");
+     cssstyle.innerHTML = '@keyframes move-size { from{transform: translate('+ fromX+', '+ fromY+') scale('+fromZ+', '+fromZ+');} to{transform: translate('+ toX+', '+ toY+') scale('+toZ+', '+toZ+');} }';    
+     cssstyle.innerHTML +='  #GPHOTO_CURRENT.move-size { animation-name: move-size;  animation-duration: '+(this.config.updateInterval/1000 + 10)+'s; }';
+
+    //alert(cssstyle.innerHTML);
+	
+  },
   notificationReceived: function (noti, payload, sender) {
     if (noti === "GPHOTO_NEXT") {
       this.updatePhotos();
@@ -134,6 +211,7 @@ Module.register("MMM-GooglePhotos", {
       this.index = 0;
       this.needMorePicsFlag = true;
     }
+    this.sendSocketNotification("GET_IMAGE_AVERAGE_COLOR", url);
     if (this.needMorePicsFlag) {
       setTimeout(() => {
         this.sendSocketNotification("NEED_MORE_PICS", []);
@@ -160,7 +238,7 @@ Module.register("MMM-GooglePhotos", {
     current.textContent = "";
     //current.classList.remove("animated")
     // let dom = document.getElementById("GPHOTO");
-    back.style.backgroundImage = `url(${url})`;
+    //back.style.backgroundImage = `url(${url})`;
     current.style.backgroundImage = `url(${url})`;
     current.classList.add("animated");
     const info = document.getElementById("GPHOTO_INFO");
@@ -211,6 +289,7 @@ Module.register("MMM-GooglePhotos", {
     wrapper.id = "GPHOTO";
     let back = document.createElement("div");
     back.id = "GPHOTO_BACK";
+    back.classList.add("backgroundFilter")    
     let current = document.createElement("div");
     current.id = "GPHOTO_CURRENT";
     if (this.data.position.search("fullscreen") === -1) {
@@ -223,9 +302,31 @@ Module.register("MMM-GooglePhotos", {
     let info = document.createElement("div");
     info.id = "GPHOTO_INFO";
     info.innerHTML = "Loading...";
+    let topdiv = document.createElement("div")
+    topdiv.id = "GPHOTO_TOP"
+    topdiv.style.willChange = 'opacity';
+    topdiv.addEventListener('animationend', ()=>{
+      if(topdiv.classList.contains("animated_block")) {
+        topdiv.classList.remove("animated_block")
+        topdiv.style.opacity = "0";          
+        this.fadeoutTimer = setTimeout(()=>{
+          clearTimeout(this.fadeoutTimer)
+          topdiv.classList.add("animated_trans")
+        }, this.config.updateInterval-4000)
+      }else if(topdiv.classList.contains("animated_trans")) {
+        topdiv.classList.remove("animated_trans")
+        topdiv.style.opacity = "1";		
+        current.classList.remove(this.AnimationEffect);
+        this.updatePhotos()				
+      }
+    })
     wrapper.appendChild(back);
     wrapper.appendChild(current);
+    wrapper.appendChild(topdiv)
     wrapper.appendChild(info);
+    let cssstyle = document.createElement('style');
+    cssstyle.id = "cssstyle";
+    wrapper.appendChild(cssstyle);
     Log.info("updated!");
     return wrapper;
   },

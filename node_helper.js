@@ -15,6 +15,9 @@ const authOption = require("./google_auth.json");
 const { shuffle } = require("./shuffle.js");
 const { error_to_string } = require("./error_to_string");
 const { ConfigFileError, AuthError } = require("./Errors.js");
+const getAverageColor = require('fast-average-color-node');
+const probe = require('probe-image-size');
+
 
 const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
@@ -78,6 +81,9 @@ const NodeHeleprObject = {
       case "MODULE_SUSPENDED_SKIP_UPDATE":
         this.log_debug("Module is suspended so skip the UI update");
         break;
+      case "GET_IMAGE_AVERAGE_COLOR":
+        this.getImageAverageColor(payload)		
+        break;
       default:
         Log.error("Unknown notification received", notification);
     }
@@ -100,7 +106,14 @@ const NodeHeleprObject = {
       Log.error("Upload Fails.");
     }
   },
-
+  getImageAverageColor: async function(imgURL) {      
+    let result = await probe(imgURL);  
+    Log.info('probe', result);
+    getAverageColor.getAverageColor(imgURL).then(color => {
+    Log.info('getAverageColor',color);
+    this.sendSocketNotification("IMGAVGCOLOR", {"IMGAVGCOLOR":color,"IMGSIZE":result});
+    });  
+  },
   initializeAfterLoading: function (config) {
     this.config = config;
     this.debug = config.debug ? config.debug : false;
