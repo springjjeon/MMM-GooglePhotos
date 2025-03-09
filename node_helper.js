@@ -125,7 +125,7 @@ const NodeHeleprObject = {
       request.head(imgURL, function(err, res, body){});
       request(imgURL).pipe(fs.createWriteStream(path.resolve(__dirname, "cache", "temp.jpg"))).on('close', async() => {
         //Log.error("[IMGAVGCOLOR] ",  err);           
-        Log.info("[enableFaceFocus]" + path.resolve(__dirname, "cache", "temp.jpg"));
+        //Log.info("[enableFaceFocus]" + path.resolve(__dirname, "cache", "temp.jpg"));
         const python = spawn('python', [this.config.faceDetectionScript, path.resolve(__dirname, "cache", "temp.jpg")]);
         python.stdout.on('data', (data) => {                         
             this.sendSocketNotification("SETIMAGEWITHBACKGROUNDCOLORWITHFACE", {"IMGAVGCOLOR":color,"IMGSIZE":result,"IMGFACE":data});
